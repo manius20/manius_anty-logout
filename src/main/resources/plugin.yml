@@ -1,0 +1,5 @@
+name: AntyLogout
+version: 1.0.0
+main: pl.sesion16.antylogout.AntyLogout
+api-version: '26.2'
+author: Marcel
