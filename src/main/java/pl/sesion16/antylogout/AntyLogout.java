@@ -1,8 +1,7 @@
 package pl.sesion16.antylogout;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -22,16 +21,18 @@ import java.util.*;
 public final class AntyLogout extends JavaPlugin implements Listener {
 
     private final Map<UUID, Long> combatMap = new HashMap<>();
-    private final Set<String> blockedCommands = new HashSet<>(Arrays.asList(
-            "/spawn", "/tp", "/tpa", "/tpaccept", "/home", "/sethome", "/warp", "/hub", "/lobby"
-    ));
+    private final Set<String> blockedCommands = new HashSet<>();
+    private int combatTimeSeconds;
     private BukkitTask actionbarTask;
 
     @Override
     public void onEnable() {
+        saveDefaultConfig();
+        loadConfiguration();
+
         getServer().getPluginManager().registerEvents(this, this);
         startActionbarTask();
-        getLogger().info("Plugin AntyLogout został pomyślnie załadowany!");
+        getLogger().info("Plugin AntyLogout został pomyślnie załadowany z obsługą config.yml!");
     }
 
     @Override
@@ -40,6 +41,19 @@ public final class AntyLogout extends JavaPlugin implements Listener {
             actionbarTask.cancel();
         }
         combatMap.clear();
+    }
+
+    private void loadConfiguration() {
+        reloadConfig();
+        combatTimeSeconds = getConfig().getInt("combat-time", 25);
+        blockedCommands.clear();
+        for (String cmd : getConfig().getStringList("blocked-commands")) {
+            blockedCommands.add(cmd.toLowerCase());
+        }
+    }
+
+    private Component colorMessage(String text) {
+        return LegacyComponentSerializer.legacyAmpersand().deserialize(text);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -67,9 +81,9 @@ public final class AntyLogout extends JavaPlugin implements Listener {
             player.setHealth(0.0);
             combatMap.remove(player.getUniqueId());
 
-            Bukkit.broadcast(Component.text("Gracz ", NamedTextColor.RED)
-                    .append(Component.text(player.getName(), NamedTextColor.YELLOW, TextDecoration.BOLD))
-                    .append(Component.text(" wylogował się podczas walki i zginął!", NamedTextColor.RED)));
+            String msg = getConfig().getString("messages.quit-broadcast", "&cGracz &e&l{PLAYER} &cwylogował się podczas walki i zginął!")
+                    .replace("{PLAYER}", player.getName());
+            Bukkit.broadcast(colorMessage(msg));
         }
     }
 
@@ -78,7 +92,8 @@ public final class AntyLogout extends JavaPlugin implements Listener {
         Player player = event.getEntity();
         if (combatMap.containsKey(player.getUniqueId())) {
             combatMap.remove(player.getUniqueId());
-            player.sendActionBar(Component.text("Pojedynek zakończony.", NamedTextColor.GREEN));
+            String msg = getConfig().getString("messages.combat-end-actionbar", "&aMożesz się bezpiecznie wylogować.");
+            player.sendActionBar(colorMessage(msg));
         }
     }
 
@@ -92,16 +107,20 @@ public final class AntyLogout extends JavaPlugin implements Listener {
 
         if (blockedCommands.contains(command)) {
             event.setCancelled(true);
-            player.sendMessage(Component.text("Nie możesz używać komendy " + command + " podczas walki!", NamedTextColor.RED));
+            String msg = getConfig().getString("messages.command-blocked", "&cNie możesz używać komendy {COMMAND} podczas walki!")
+                    .replace("{COMMAND}", command);
+            player.sendMessage(colorMessage(msg));
         }
     }
 
     private void tagPlayer(Player player) {
         boolean wasInCombat = isInCombat(player);
-        combatMap.put(player.getUniqueId(), System.currentTimeMillis() + 25000L);
+        combatMap.put(player.getUniqueId(), System.currentTimeMillis() + (combatTimeSeconds * 1000L));
 
         if (!wasInCombat) {
-            player.sendMessage(Component.text("Jesteś w trakcie walki! Nie wylogowuj się przez 25 sekund.", NamedTextColor.RED, TextDecoration.BOLD));
+            String msg = getConfig().getString("messages.combat-start", "&cJesteś w trakcie walki! Nie wylogowuj się przez {TIME} sekund.")
+                    .replace("{TIME}", String.valueOf(combatTimeSeconds));
+            player.sendMessage(colorMessage(msg));
         }
     }
 
@@ -131,12 +150,17 @@ public final class AntyLogout extends JavaPlugin implements Listener {
 
                     if (remainingMs <= 0) {
                         iterator.remove();
-                        player.sendActionBar(Component.text("Możesz się bezpiecznie wylogować.", NamedTextColor.GREEN));
-                        player.sendMessage(Component.text("Koniec walki. Możesz ponownie używać komend.", NamedTextColor.GREEN));
+                        String endActionbar = getConfig().getString("messages.combat-end-actionbar", "&aMożesz się bezpiecznie wylogować.");
+                        String endChat = getConfig().getString("messages.combat-end-chat", "&aKoniec walki. Możesz ponownie używać komend.");
+                        
+                        player.sendActionBar(colorMessage(endActionbar));
+                        player.sendMessage(colorMessage(endChat));
                     } else {
                         int secondsLeft = (int) Math.ceil(remainingMs / 1000.0);
-                        player.sendActionBar(Component.text("Jesteś w walce jeszcze przez: ", NamedTextColor.RED)
-                                .append(Component.text(secondsLeft + "s", NamedTextColor.YELLOW, TextDecoration.BOLD)));
+                        String timerMsg = getConfig().getString("messages.actionbar-timer", "&cJesteś w walce jeszcze przez: &e&l{TIME}s")
+                                .replace("{TIME}", String.valueOf(secondsLeft));
+                        
+                        player.sendActionBar(colorMessage(timerMsg));
                     }
                 }
             }
