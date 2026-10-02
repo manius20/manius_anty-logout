@@ -1,0 +1,25 @@
+# Czas trwania walki w sekundach
+combat-time: 25
+
+# Lista komend zablokowanych podczas walki (wpisuj małymi literami z małą kreską /)
+blocked-commands:
+  - "/spawn"
+  - "/tp"
+  - "/tpa"
+  - "/tpaccept"
+  - "/home"
+  - "/sethome"
+  - "/warp"
+  - "/hub"
+  - "/lobby"
+  - "/kit"
+  - "/pay"
+
+# Wiadomości (używaj kolorów w formacie &a, &c, &e itd.)
+messages:
+  combat-start: "&cJesteś w trakcie walki! Nie wylogowuj się przez {TIME} sekund."
+  combat-end-chat: "&aKoniec walki. Możesz ponownie używać komend."
+  combat-end-actionbar: "&aMożesz się bezpiecznie wylogować."
+  command-blocked: "&cNie możesz używać komendy {COMMAND} podczas walki!"
+  actionbar-timer: "&cJesteś w walce jeszcze przez: &e&l{TIME}s"
+  quit-broadcast: "&cGracz &e&l{PLAYER} &cwylogował się podczas walki i zginął!"
