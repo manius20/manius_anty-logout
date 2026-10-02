@@ -1,4 +1,4 @@
-name: Build Plugin
+name: Build Plugin 26.2
 
 on:
   push:
@@ -20,10 +20,10 @@ jobs:
         cache: maven
 
     - name: Build with Maven
-      run: mvn package --file pom.xml
+      run: mvn clean package --file pom.xml
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: AntyLogout-Jar
+        name: AntyLogout-26.2
         path: target/*.jar
